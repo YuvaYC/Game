@@ -3,17 +3,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Last Circle – 2D Battle Royale</title>
 <style>
+*{box-sizing:border-box}
+button,input{font:inherit}
 :root{--bg:#0f1720;--card:#16212c;--fg:#e8eef5;--ac:#ff5a3c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1720;--card:#16212c;--fg:#e8eef5}}
 :root[data-theme="dark"]{--bg:#0f1720;--card:#16212c;--fg:#e8eef5}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden}
 canvas{display:block;cursor:crosshair}
-#menu{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,15,22,.82);padding:16px}
-.card{background:var(--card);border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.5)}
-h1{margin:0 0 4px;font-size:34px;letter-spacing:2px;color:var(--ac)}
+#menu{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%,rgba(255,90,60,.12),transparent 42%),rgba(5,9,14,.92);padding:16px}
+.card{background:linear-gradient(180deg,#192633,#111b25);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:28px;max-width:460px;width:100%;box-shadow:0 20px 70px rgba(0,0,0,.65)}
+h1{margin:0 0 4px;font-size:clamp(30px,8vw,42px);letter-spacing:3px;color:var(--ac)}
 p{margin:6px 0;opacity:.85;font-size:14px;line-height:1.5}
 input{width:100%;box-sizing:border-box;padding:12px;margin:14px 0 10px;border-radius:10px;border:1px solid #345;background:#0c141c;color:var(--fg);font-size:16px}
-button{width:100%;padding:14px;border:0;border-radius:10px;background:var(--ac);color:#fff;font-size:18px;font-weight:700;cursor:pointer}
+button{width:100%;padding:15px;border:0;border-radius:12px;background:linear-gradient(135deg,#ff6b4a,#ff3f2c);color:#fff;font-size:18px;font-weight:800;cursor:pointer;box-shadow:0 8px 24px rgba(255,75,45,.25);touch-action:manipulation}
 button:hover{filter:brightness(1.1)}
 kbd{background:#0c141c;border-radius:4px;padding:1px 6px;font-size:12px}
 </style></head><body>
@@ -23,11 +25,11 @@ kbd{background:#0c141c;border-radius:4px;padding:1px 6px;font-size:12px}
 <p>2D online battle royale · up to 10 players per arena. Loot guns, meds and shields, stay inside the shrinking zone, be the last one standing.</p>
 <input id="nm" maxlength="14" placeholder="Your name">
 <button id="go">▶ PLAY</button>
-<p><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim &amp; shoot · <kbd>1-4</kbd> weapons · <kbd>H</kbd> use medkit · <kbd>M</kbd> mute<br>You start with a pistol. Walk over loot to pick it up. Best on desktop.</p>
+<p><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim &amp; shoot · <kbd>1-4</kbd> weapons · <kbd>H</kbd> use medkit · <kbd>M</kbd> mute<br>You start with a pistol. Walk over loot to pick it up. PC: WASD + mouse · Phone: virtual joystick + touch controls.</p>
 </div></div>
 <script>
 const W=2400,C=W/2,RL=165000,cv=document.getElementById('c'),g=cv.getContext('2d');
-let VW,VH;function rs(){VW=cv.width=innerWidth;VH=cv.height=innerHeight}rs();addEventListener('resize',rs);
+let VW,VH;function rs(){const dpr=Math.min(devicePixelRatio||1,2);VW=innerWidth;VH=innerHeight;cv.width=Math.floor(VW*dpr);cv.height=Math.floor(VH*dpr);cv.style.width=VW+'px';cv.style.height=VH+'px';g.setTransform(dpr,0,0,dpr,0,0)}rs();addEventListener('resize',rs);
 const WP={pistol:{d:14,r:.33,s:760,p:1,sp:.04,col:'#ddd',k:'Pistol'},smg:{d:8,r:.085,s:820,p:1,sp:.12,col:'#7cf',k:'SMG'},shotgun:{d:9,r:.85,s:700,p:6,sp:.28,col:'#fa4',k:'Shotgun'},rifle:{d:28,r:.55,s:1100,p:1,sp:.015,col:'#f7a',k:'Rifle'}};
 const ORD=['pistol','smg','shotgun','rifle'];
 const LS={ammo:['#fc3','A'],med:['#f44','+'],shield:['#4af','S'],smg:['#7cf','SMG'],shotgun:['#fa4','SG'],rifle:['#f7a','AR']};
@@ -50,30 +52,107 @@ function spawn(x,y,as,w,o){const p=WP[w];if(!p||!Array.isArray(as))return;if(o==
  for(const a of as.slice(0,8)){const an=+a;if(!isFinite(an))continue;bul.push({x:+x,y:+y,vx:Math.cos(an)*p.s,vy:Math.sin(an)*p.s,l:.9,d:p.d,o,w})}}
 function shoot(){const p=WP[me.w];cd=p.r;me.am--;snd(me.w);const as=[];for(let i=0;i<p.p;i++)as.push(me.a+(Math.random()-.5)*2*p.sp);
  const x=Math.round(me.x+Math.cos(me.a)*24),y=Math.round(me.y+Math.sin(me.a)*24);spawn(x,y,as,me.w,'me');
- if(room)room.emit('shot',{x,y,as:as.map(v=>+v.toFixed(3)),w:me.w}).catch(()=>{})}
-function kill(d){if(room)room.emit('kill',d).catch(()=>{});else onKill(d)}
+ send('shot',{x,y,angles:as.map(v=>+v.toFixed(3)),weapon:me.w})}
+function kill(d){send('kill',d); if(!serverOnline) onKill(d)}
 function onKill(d){feed.push({t:(String(d.kn||'Zone').slice(0,14))+' ☠ '+String(d.vn||'?').slice(0,14),e:Date.now()+6000});if(d.kp&&d.kp===myPeer)me.k++}
 function die(by){me.al=false;me.hp=0;snd('die');const k=others.get(by);kill({kp:by,kn:k?k.n:'',vn:pname})}
 function dmg(d,by){if(!me.al)return;snd('hit');me.hf=performance.now();const s=Math.min(me.sh,d);me.sh-=s;me.hp-=d-s;if(me.hp<=0)die(by)}
 function pick(l){const t=l.t;snd(t==='med'||t==='shield'?'heal':'pick');
  if(t==='ammo')me.am=Math.min(200,me.am+25);else if(t==='med')me.med=Math.min(5,me.med+1);else if(t==='shield')me.sh=Math.min(100,me.sh+50);
  else{if(!me.own[t])me.w=t;me.own[t]=1;me.am=Math.min(200,me.am+15)}
- taken.add(l.i);if(room)room.emit('pick',{i:l.i,rd:RD}).catch(()=>{})}
+ taken.add(l.i);send('pick',{index:l.i,round:RD})}
 
 function sync(list){const ids=new Set();
  for(const p of list){if(p.sameTab){myPeer=p.peer;continue}if(p.kind!=='viewer')continue;const s=p.presence;if(!s||typeof s.x!=='number')continue;
   const o=others.get(p.peer)||{x:s.x,y:s.y};ids.add(p.peer);
   Object.assign(o,{tx:s.x,ty:s.y,a:+s.a||0,hp:+s.hp||0,al:!!s.al,n:String(s.n||'?').slice(0,14),c:+s.c||0,w:WP[s.w]?s.w:'pistol',k:+s.k||0});others.set(p.peer,o)}
  for(const k of [...others.keys()])if(!others.get(k).bot&&!ids.has(k))others.delete(k)}
-async function net(){
- try{const R=window.claude&&await claude.use('room');if(!R)throw 0;let rm=null;
-  for(let i=1;i<=12&&!rm;i++){const x=await R.join('arena-'+i);await new Promise(r=>setTimeout(r,800));if(x.peers().length<=10){rm=x;arena=i}else await x.leave()}
-  if(!rm)throw 0;room=rm;mode='o';for(const k of [...others.keys()])if(others.get(k).bot)others.delete(k);
-  room.onPeers(c=>sync(c.peers),()=>{});sync(room.peers());
-  room.on('shot',m=>{if(m.isMe||!m.data)return;const d=m.data;spawn(d.x,d.y,d.as,d.w,m.peer)});
-  room.on('kill',m=>onKill(m.data||{}));
-  room.on('pick',m=>{const d=m.data||{};if(!m.isMe&&d.rd===RD)taken.add(d.i)});
- }catch(e){room=null;mode='b';mkBots()}}
+// Multiplayer endpoint. Run the included server.js beside this HTML for real players.
+const WS_URL =
+  (location.protocol === 'https:' ? 'wss://' : 'ws://') +
+  location.host + '/game';
+
+let ws=null, playerId=null, serverOnline=false, matchReady=false;
+const SERVER_MAX_PLAYERS=10;
+
+function setConnection(text,color){
+  const el=document.getElementById('connectionBadge');
+  if(el){el.textContent=text;el.style.color=color||'#aaa'}
+}
+
+function send(type,data={}){
+  if(ws && ws.readyState===WebSocket.OPEN){
+    ws.send(JSON.stringify({type,...data}));
+  }
+}
+
+function handleServer(m){
+  if(m.type==='welcome'){
+    playerId=m.id;
+    send('join',{name:pname,color:hue});
+  }else if(m.type==='match_start'){
+    mode='o'; arena=m.arena||1; matchReady=true;
+    // Server supplies all current players. The local player is always placed immediately.
+    if(m.players){
+      for(const p of m.players){
+        if(p.id===playerId) continue;
+        others.set(p.id,{x:p.x,y:p.y,tx:p.x,ty:p.y,a:p.a||0,hp:p.hp||100,
+          al:p.al!==false,n:p.name||'Player',c:p.color||120,w:p.w||'pistol',k:p.k||0,bot:false});
+      }
+    }
+    setConnection('ONLINE · '+Math.min(m.count||others.size+1,SERVER_MAX_PLAYERS)+'/10','#8fdfb0');
+  }else if(m.type==='state'){
+    if(m.id===playerId) return;
+    const o=others.get(m.id)||{x:m.x,y:m.y};
+    Object.assign(o,{tx:m.x,ty:m.y,a:m.a||0,hp:m.hp||0,al:m.al!==false,
+      n:m.name||'Player',c:m.color||120,w:WP[m.w]?m.w:'pistol',k:m.k||0,bot:false});
+    others.set(m.id,o);
+  }else if(m.type==='shot'){
+    if(m.id!==playerId) spawn(m.x,m.y,m.angles||[],m.weapon,m.id);
+  }else if(m.type==='kill'){
+    onKill(m);
+  }else if(m.type==='pick'){
+    if(m.id!==playerId && m.round===RD) taken.add(m.index);
+  }else if(m.type==='leave'){
+    others.delete(m.id);
+  }
+}
+
+function connectMultiplayer(){
+  // No lobby: the WebSocket connection itself is the matchmaking/join action.
+  try{
+    ws=new WebSocket(WS_URL);
+    setConnection('CONNECTING…','#ffd36b');
+    ws.onopen=()=>{serverOnline=true;setConnection('MATCHMAKING…','#ffd36b')};
+    ws.onmessage=e=>{
+      try{handleServer(JSON.parse(e.data))}catch(_){}
+    };
+    ws.onclose=()=>{
+      serverOnline=false;matchReady=false;
+      // Continue as a local practice match rather than freezing the game.
+      mode='b'; others.clear(); mkBots();
+      setConnection('OFFLINE PRACTICE','#ffb0a8');
+    };
+    ws.onerror=()=>{serverOnline=false};
+  }catch(_){
+    mode='b'; mkBots(); setConnection('OFFLINE PRACTICE','#ffb0a8');
+  }
+}
+
+function net(){
+  // Standard WebSocket only. No framework, SDK, or external multiplayer library.
+  connectMultiplayer();
+}
+
+function sendPlayerState(){
+  if(!serverOnline || !me.x) return;
+  send('state',{
+    x:Math.round(me.x),y:Math.round(me.y),a:+me.a.toFixed(3),
+    hp:Math.round(me.hp),sh:Math.round(me.sh),al:me.al,
+    weapon:me.w,kills:me.k
+  });
+}
+
 
 function upd(dt){
  const r=Math.floor(Date.now()/RL);if(r!==RD){RD=r;gen(r);reset();for(const k of [...others.keys()])if(others.get(k).bot)others.delete(k);if(mode==='b')mkBots()}
@@ -182,10 +261,10 @@ function draw(){
  // HUD
  if(performance.now()-(me.hf||0)<250){g.fillStyle='rgba(255,0,0,'+(.35*(1-(performance.now()-me.hf)/250))+')';g.fillRect(0,0,VW,VH)}
  T('M: sound '+(mute?'OFF':'ON'),VW-14,VH-150,11,'right','#aaa');
- const alive=(me.al?1:0)+[...others.values()].filter(o=>o.al).length,total=others.size+1,next=Math.ceil(RL/1000-t);
+ const alive=(me.al?1:0)+[...others.values()].filter(o=>o.al).length,total=Math.min(others.size+1,10),next=Math.ceil(RL/1000-t);
  T('Alive '+alive+'/'+total,VW/2,28,20,'center');
  T(t<15?'Zone starts closing in '+Math.ceil(15-t)+'s':t<135?'Zone is closing':'Final zone',VW/2,48,13,'center','#ffb4a8');
- T(mode==='o'?'Online · Arena '+arena+' · '+total+'/10 players':mode==='b'?'Offline practice (bots) – multiplayer unavailable here':'Connecting…',14,24,13,'left','#9fd');
+ T(mode==='o'?'Online · Arena '+arena+' · '+Math.min(total,10)+'/10 players':mode==='b'?'Offline practice (bots)':'Connecting…',14,24,13,'left','#9fd');
  T('Kills: '+me.k,14,44,13);T('Next round '+next+'s',14,62,12,'left','#bbb');
  const now=Date.now();feed=feed.filter(f=>f.e>now).slice(-6);feed.forEach((f,i)=>T(f.t,VW-14,28+i*18,13,'right'));
  g.fillStyle='rgba(0,0,0,.6)';g.fillRect(14,VH-62,200,16);g.fillRect(14,VH-40,200,12);
@@ -213,8 +292,73 @@ addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});
 cv.addEventListener('mousedown',e=>{mouse.x=e.clientX;mouse.y=e.clientY;mouse.d=true});
 addEventListener('mouseup',()=>mouse.d=false);
 cv.addEventListener('contextmenu',e=>e.preventDefault());
+
+// --- Mobile controls (Pointer Events; no library) ---
+const joy=document.getElementById('joy'), knob=document.getElementById('joyKnob');
+let joyPointer=null, touchFire=false;
+function setJoy(e){
+  const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+  let dx=e.clientX-cx,dy=e.clientY-cy,dist=Math.hypot(dx,dy),max=38;
+  if(dist>max){dx=dx/dist*max;dy=dy/dist*max}
+  knob.style.transform=`translate(${dx}px,${dy}px)`;
+  keys.w=dy<-10;keys.s=dy>10;keys.a=dx<-10;keys.d=dx>10;
+}
+function resetJoy(){
+  knob.style.transform='translate(0,0)';
+  keys.w=keys.a=keys.s=keys.d=false;
+}
+joy.addEventListener('pointerdown',e=>{joyPointer=e.pointerId;joy.setPointerCapture(e.pointerId);setJoy(e)});
+joy.addEventListener('pointermove',e=>{if(e.pointerId===joyPointer)setJoy(e)});
+joy.addEventListener('pointerup',()=>{joyPointer=null;resetJoy()});
+joy.addEventListener('pointercancel',()=>{joyPointer=null;resetJoy()});
+
+const fireBtn=document.getElementById('fireBtn');
+fireBtn.addEventListener('pointerdown',e=>{e.preventDefault();touchFire=true;mouse.d=true});
+fireBtn.addEventListener('pointerup',e=>{e.preventDefault();touchFire=false;mouse.d=false});
+fireBtn.addEventListener('pointercancel',()=>{touchFire=false;mouse.d=false});
+fireBtn.addEventListener('pointerleave',()=>{if(!touchFire)mouse.d=false});
+
+document.getElementById('healBtn').addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  if(me.al&&me.med>0&&me.hp<100){me.hp=Math.min(100,me.hp+50);me.med--;snd('heal')}
+});
+
+cv.addEventListener('pointermove',e=>{
+  if(e.pointerType!=='mouse'){
+    mouse.x=e.clientX;mouse.y=e.clientY;
+  }
+});
+cv.addEventListener('pointerdown',e=>{
+  if(e.pointerType!=='mouse' && e.target===cv){
+    mouse.x=e.clientX;mouse.y=e.clientY;
+  }
+});
+
 document.getElementById('nm').value='Player'+(100+Math.floor(Math.random()*900));
 document.getElementById('go').onclick=()=>{pname=(document.getElementById('nm').value.trim()||'Player').slice(0,14);
- document.getElementById('menu').style.display='none';started=true;au();net()};
+ document.getElementById('menu').style.display='none';started=true;reset();au();net()};
 requestAnimationFrame(loop);
-</script></body></html>
+</script>
+<div id="mobileUI" aria-hidden="true">
+  <div id="joy"><div id="joyKnob"></div></div>
+  <div id="touchButtons">
+    <button id="fireBtn">FIRE</button>
+    <button id="healBtn">MED</button>
+  </div>
+</div>
+<div id="connectionBadge">OFFLINE</div>
+<style>
+#mobileUI{display:none;position:fixed;inset:0;z-index:8;pointer-events:none}
+#joy{position:absolute;left:24px;bottom:28px;width:126px;height:126px;border-radius:50%;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);pointer-events:auto;touch-action:none}
+#joyKnob{position:absolute;left:38px;top:38px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.28);border:1px solid rgba(255,255,255,.3)}
+#touchButtons{position:absolute;right:22px;bottom:24px;display:flex;gap:10px;pointer-events:auto}
+#touchButtons button{width:76px;height:58px;padding:0;font-size:12px;background:rgba(255,90,60,.78);border:1px solid rgba(255,255,255,.15)}
+#healBtn{background:rgba(70,150,255,.72)!important}
+#connectionBadge{position:fixed;top:10px;right:10px;z-index:12;padding:5px 9px;border-radius:999px;background:rgba(0,0,0,.55);font-size:11px;color:#aaa;pointer-events:none}
+@media (pointer:coarse),(max-width:800px){
+  #mobileUI{display:block}
+  #connectionBadge{top:calc(env(safe-area-inset-top,0px) + 8px)}
+  canvas{touch-action:none}
+}
+</style>
+</body></html>
